@@ -1,0 +1,6 @@
+.scannerwork
+
+README.md
+runDeploy.sh
+.gitlab-ci.yml
+sonar.properties
