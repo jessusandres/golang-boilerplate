@@ -1,0 +1,30 @@
+name:
+  looker-services
+services:
+  postgres:
+    container_name: looker-developers-db
+    image: postgres:17.1-alpine
+    restart: always
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - PGDATA=/data/postgres
+      - TZ=America/Lima
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -d ${POSTGRES_DB} -U ${POSTGRES_USER}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - postgresql:/data/postgres
+      - postgresql_lib:/var/lib/postgresql
+      - postgresql_data:/var/lib/postgresql/data
+      - ./db_init:/docker-entrypoint-initdb.d
+
+volumes:
+  postgresql:
+  postgresql_lib:
+  postgresql_data:

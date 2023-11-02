@@ -1,0 +1,5 @@
+---
+include:
+  - project: 'empresas-cmpc/devops-services/pipelines/cloud-functions'
+    ref: master
+    file: 'gitlab-ci-template.yml'
