@@ -1,13 +1,13 @@
 package config
 
 import (
-	"fmt"
 	"log"
 	"testing"
 
-	"github.com/joho/godotenv"
 	"lookerdevelopers/boilerplate/cmd/types"
 	"lookerdevelopers/boilerplate/cmd/utils"
+
+	"github.com/joho/godotenv"
 )
 
 var EnvConfig types.Config
@@ -17,7 +17,7 @@ func init() {
 	err := godotenv.Load()
 
 	if testing.Testing() {
-		fmt.Println("We are testing - not loading envs")
+		log.Println("We are testing - not loading envs")
 		return
 	}
 

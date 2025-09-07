@@ -2,11 +2,12 @@ package routes
 
 import (
 	"fmt"
-	"lookerdevelopers/boilerplate/cmd/apperrors"
+	apierrors "lookerdevelopers/boilerplate/cmd/errors/api"
 	"net/http"
 
-	"github.com/gin-gonic/gin"
 	"lookerdevelopers/boilerplate/cmd/utils"
+
+	"github.com/gin-gonic/gin"
 )
 
 func NotFound(c *gin.Context) {
@@ -16,16 +17,16 @@ func NotFound(c *gin.Context) {
 	message := fmt.Sprintf("Route [%s] %s not found", routeMethod, routePath)
 	uuid := ""
 
-	state, ok := utils.ExtractState(c)
+	state, ok := utils.ExtractAppState(c)
 
 	if ok {
 		uuid = state.Uuid
 	}
 
-	c.JSON(http.StatusNotFound, apperrors.ApiErrorResponse{
-		Error: apperrors.ApiError{
-			Message: message,
-			UUID:    uuid,
-		},
-	})
+	apiErr := apierrors.ApiError{
+		Message: message,
+		UUID:    uuid,
+	}
+
+	apiErr.ToResponse(c, http.StatusNotFound)
 }

@@ -1,10 +1,7 @@
 package utils
 
 import (
-	"fmt"
 	"log"
-	"log/slog"
-	"os"
 	"runtime"
 	"time"
 )
@@ -17,10 +14,10 @@ func PrintMemUsage() {
 	var memStats runtime.MemStats
 	runtime.ReadMemStats(&memStats)
 
-	// In Mib
-	fmt.Printf("Alloc = %v MiB", bToMb(memStats.Alloc))
-	fmt.Printf("\t TotalAlloc = %v MiB", bToMb(memStats.TotalAlloc))
-	fmt.Printf("\t Sys = %v MiB \n", bToMb(memStats.Sys))
+	// Show metrics in Mib
+	log.Printf("Alloc = %v MiB", bToMb(memStats.Alloc))
+	log.Printf("\t TotalAlloc = %v MiB", bToMb(memStats.TotalAlloc))
+	log.Printf("\t Sys = %v MiB \n", bToMb(memStats.Sys))
 }
 
 func ReleaseVariableMemory[T any](variable *T) {
@@ -42,13 +39,4 @@ func GetYearsAgoPgFormat(years int) string {
 func DateToUnix(date string) int64 {
 	t, _ := time.Parse("2006-01-02", date)
 	return t.Unix()
-}
-
-func initLogger(service string, component string) *slog.Logger {
-	return slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-		Level: slog.LevelDebug,
-	})).With(
-		"service", service,
-		"component", component,
-	)
 }

@@ -2,10 +2,11 @@ package utils
 
 import (
 	"errors"
-	"github.com/gin-gonic/gin"
-	"github.com/stretchr/testify/assert"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/assert"
 )
 
 type MockContext struct {
@@ -27,12 +28,12 @@ func TestHandleServiceErrorWhenErrorIsNil(t *testing.T) {
 		AbortCalled: false,
 	}
 
-	hasErr := HandleServiceError(c, nil)
+	hasErr := GinAbortError(c, nil)
 
 	assert.False(t, mockCtx.AbortCalled, "Expected c.Abort() to be called")
 
 	if hasErr {
-		t.Errorf("HandleServiceError should return false")
+		t.Errorf("GinAbortError should return false")
 	}
 }
 
@@ -44,11 +45,11 @@ func TestHandleServiceErrorWhenErrorIsNotNil(t *testing.T) {
 		AbortCalled: false,
 	}
 
-	hasErr := HandleServiceError(mockCtx, errors.New("test"))
+	hasErr := GinAbortError(mockCtx, errors.New("test"))
 
 	assert.True(t, mockCtx.AbortCalled, "Expected c.Abort() to be called")
 
 	if !hasErr {
-		t.Errorf("HandleServiceError should return true")
+		t.Errorf("GinAbortError should return true")
 	}
 }

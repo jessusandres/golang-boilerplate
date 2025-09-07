@@ -14,6 +14,6 @@ type ApiResult struct {
 	Data any `json:"data"`
 }
 
-func (a *ApiResult) Response(c *gin.Context, statusCode int) {
-	c.JSON(statusCode, a)
+func (ar *ApiResult) Response(c *gin.Context, statusCode int) {
+	c.JSON(statusCode, ar)
 }

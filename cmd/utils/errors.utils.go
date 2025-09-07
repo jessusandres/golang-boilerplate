@@ -1,10 +1,11 @@
 package utils
 
 import (
-	"lookerdevelopers/boilerplate/cmd/interfaces"
+	"github.com/gin-gonic/gin"
 )
 
-func HandleServiceError(c interfaces.Aborter, err error) bool {
+// GinAbortError aborts the current request and returns true if the error is not nil, otherwise returns false.
+func GinAbortError(c *gin.Context, err error) bool {
 	if err != nil {
 		_ = c.Error(err)
 		c.Abort()

@@ -34,7 +34,7 @@ func init() {
 
 	// Use the default driver when USE_SQL_CONNECTOR=false or not set
 	if config.EnvConfig.UseSQLConnector {
-		log.Println("☁️  Using cloudsqlpostgres driver")
+		log.Println("☁️  Using CloudSQL postgres driver")
 		db, err = gorm.Open(postgres.New(postgres.Config{
 			DriverName: "cloudsqlpostgres",
 			DSN:        dsn,

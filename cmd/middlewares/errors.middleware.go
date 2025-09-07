@@ -2,15 +2,17 @@ package middlewares
 
 import (
 	"errors"
+	apierrors "lookerdevelopers/boilerplate/cmd/errors/api"
+	apperrors "lookerdevelopers/boilerplate/cmd/errors/app"
+	llog "lookerdevelopers/boilerplate/cmd/logger"
 
 	"github.com/lib/pq"
 
-	"github.com/gin-gonic/gin"
-	"github.com/jackc/pgx/v5/pgconn"
-	"lookerdevelopers/boilerplate/cmd/apperrors"
-	"lookerdevelopers/boilerplate/cmd/config"
 	"lookerdevelopers/boilerplate/cmd/types"
 	"lookerdevelopers/boilerplate/cmd/utils"
+
+	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 func HandleErr() gin.HandlerFunc {
@@ -18,18 +20,18 @@ func HandleErr() gin.HandlerFunc {
 		context.Next()
 
 		if len(context.Errors) > 0 {
-			state, _ := utils.ExtractState(context)
+			state, _ := utils.ExtractAppState(context)
 			reqUuid := state.Uuid
 
 			err := context.Errors.Last()
 
-			config.Logger.Info("Catching err for request: ", reqUuid)
-			config.Logger.Error(err)
+			llog.Logger.Info("Catching err for request: ", reqUuid)
+			llog.Logger.Error(err)
 
 			var httpErr *types.HTTPError
 
 			if errors.As(err.Err, &httpErr) {
-				apiError := apperrors.ApiError{
+				apiError := apierrors.ApiError{
 					Message: httpErr.Message,
 					UUID:    reqUuid,
 				}
@@ -43,11 +45,11 @@ func HandleErr() gin.HandlerFunc {
 			var pqError *pq.Error
 
 			if errors.As(err, &pgError) || errors.As(err, &pqError) {
-				config.Logger.Errorf("Database error for request %s, %v", reqUuid, err)
+				llog.Logger.Errorf("Database error for request %s, %v", reqUuid, err)
 
 				dbErr := apperrors.NewInternalServerError("Oops, something went wrong. Please try again later.")
 
-				apiError := apperrors.ApiError{
+				apiError := apierrors.ApiError{
 					Message: dbErr.Message,
 					UUID:    reqUuid,
 				}
@@ -57,10 +59,10 @@ func HandleErr() gin.HandlerFunc {
 				return
 			}
 
-			config.Logger.Info("Caution, unhandled error")
+			llog.Logger.Info("Caution, unhandled error")
 			unhandledErr := apperrors.NewInternalServerError("Oops, something went wrong when processing your request. Please try again later.")
 
-			apiError := apperrors.ApiError{
+			apiError := apierrors.ApiError{
 				Message: unhandledErr.Message,
 				UUID:    reqUuid,
 			}

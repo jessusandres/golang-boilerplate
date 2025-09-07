@@ -6,7 +6,9 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func ExtractState(c *gin.Context) (types.AppState, bool) {
+// ExtractAppState extracts the key "state" from the context and returns it if it exists, otherwise returns
+// an empty state with a false boolean.
+func ExtractAppState(c *gin.Context) (types.AppState, bool) {
 	reqState, exists := c.Get("state")
 
 	if !exists {

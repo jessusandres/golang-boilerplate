@@ -6,7 +6,8 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"lookerdevelopers/boilerplate/cmd/apperrors"
+	apierrors "lookerdevelopers/boilerplate/cmd/errors/api"
+	apperrors "lookerdevelopers/boilerplate/cmd/errors/app"
 	"lookerdevelopers/boilerplate/cmd/interfaces"
 	"lookerdevelopers/boilerplate/cmd/types"
 
@@ -17,15 +18,15 @@ import (
 func ValidateJSON[T any]() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		isValid := validateRequest(c)
+		valid := isValidJsonRequest(c)
 
-		if !isValid {
+		if !valid {
 			return
 		}
 
-		payload, isValid := validateJsonPayload[T](c)
+		payload, validJSON := validateJsonPayload[T](c)
 
-		if !isValid {
+		if !validJSON {
 			return
 		}
 
@@ -35,12 +36,13 @@ func ValidateJSON[T any]() gin.HandlerFunc {
 	}
 }
 
-func validateRequest(c *gin.Context) bool {
+func isValidJsonRequest(c *gin.Context) bool {
 	contentType := c.GetHeader("Content-Type")
 
 	if contentType != "application/json" {
 		badRequestErr := apperrors.NewBadRequestError("Content-Type must be application/json")
-		apiError := apperrors.ApiError{
+
+		apiError := apierrors.ApiError{
 			Message: badRequestErr.Message,
 		}
 
@@ -50,7 +52,7 @@ func validateRequest(c *gin.Context) bool {
 
 	if c.Request.Body == nil {
 		badRequestErr := apperrors.NewBadRequestError("Request body is empty")
-		apiError := apperrors.ApiError{
+		apiError := apierrors.ApiError{
 			Message: badRequestErr.Message,
 		}
 
@@ -68,7 +70,7 @@ func validateJsonPayload[T any](c *gin.Context) (T, bool) {
 
 		if errors.Is(err, io.EOF) {
 			badRequestErr := apperrors.NewBadRequestError("Request body is empty")
-			apiError := apperrors.ApiError{
+			apiError := apierrors.ApiError{
 				Message: badRequestErr.Message,
 			}
 
@@ -88,7 +90,7 @@ func validateJsonPayload[T any](c *gin.Context) (T, bool) {
 				),
 			)
 
-			apiError := apperrors.ApiError{
+			apiError := apierrors.ApiError{
 				Message: badRequestErr.Message,
 			}
 
@@ -106,7 +108,7 @@ func validateJsonPayload[T any](c *gin.Context) (T, bool) {
 			}
 
 			unprocessableEntityErr := apperrors.NewUnprocessableEntityError("Errors found in request body")
-			apiError := apperrors.ApiError{
+			apiError := apierrors.ApiError{
 				Message: unprocessableEntityErr.Message,
 				Details: errDetails,
 			}
@@ -117,7 +119,7 @@ func validateJsonPayload[T any](c *gin.Context) (T, bool) {
 		}
 
 		unprocessableEntityErr := apperrors.NewUnprocessableEntityError(err.Error())
-		apiError := apperrors.ApiError{
+		apiError := apierrors.ApiError{
 			Message: unprocessableEntityErr.Message,
 		}
 
@@ -134,7 +136,7 @@ func validateJsonPayload[T any](c *gin.Context) (T, bool) {
 }
 
 func ValidationErrorMsg(fe validator.FieldError) string {
-	log.Printf("Tag: %s, Param: %s\n", fe.Tag(), fe.Param())
+	log.Printf("Tag: %s - Field: %s - Value: %s\n", fe.Tag(), fe.Field(), fe.Param())
 
 	switch fe.Tag() {
 	case "required":
@@ -153,11 +155,20 @@ func ValidationErrorMsg(fe validator.FieldError) string {
 		return fmt.Sprintf("Should be less than or equal to %s", fe.Param())
 	case "uuid4":
 		return fmt.Sprintf("Should be a valid %s", fe.Tag())
+	case "base64":
+		return fmt.Sprintf("Should be a valid %s", fe.Tag())
 	}
 
 	return "Unknown error"
 }
 
+// GetValidatedPayload returns the validated payload from the context or an empty payload if it doesn't exist.
+//
+// Returns:
+//   - The first return value is the validated payload.
+//   - The second return value indicates if the payload exists or not.
+//
+// The error is filled in the context if the assertion fails.
 func GetValidatedPayload[T any](c *gin.Context) (T, bool) {
 	var zero T
 
@@ -171,7 +182,8 @@ func GetValidatedPayload[T any](c *gin.Context) (T, bool) {
 
 	if !ok {
 		internalErr := apperrors.NewInternalServerError("Failed to get validated payload")
-		apiError := apperrors.ApiError{
+
+		apiError := apierrors.ApiError{
 			Message: internalErr.Message,
 		}
 

@@ -5,15 +5,17 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
+	llog "lookerdevelopers/boilerplate/cmd/logger"
+
+	"lookerdevelopers/boilerplate/cmd/dto"
+	"lookerdevelopers/boilerplate/cmd/tasks"
 
 	"cloud.google.com/go/pubsub"
 	"github.com/go-playground/validator/v10"
-	"lookerdevelopers/boilerplate/cmd/dto"
-	"lookerdevelopers/boilerplate/cmd/tasks"
 )
 
 func InitListener() {
-	log.Println("☁️  Building pub/sub connection")
+	llog.Logger.Infoln("☁️  Building pub/sub connection")
 
 	ctx := context.Background()
 	projectID := ""
@@ -26,12 +28,12 @@ func InitListener() {
 	}
 
 	subscription := client.Subscription(subscriptionName)
-	log.Println("Pub/Sub initialization successfully 🚀")
+	llog.Logger.Infoln("Pub/Sub initialization successfully 🚀")
 
 	go func() {
 		err = subscription.Receive(ctx, func(ctx context.Context, message *pubsub.Message) {
 
-			var psPayload dto.TrackingPatchDto
+			var psPayload dto.IncidentPatchDto
 
 			data := string(message.Data)
 			log.Printf("Stringify payload: %s", data)
@@ -45,7 +47,7 @@ func InitListener() {
 				return
 			}
 
-			log.Println("Payload successfully unmarshalled ⚙️")
+			llog.Logger.Infoln("Payload successfully unmarshalled ⚙️")
 
 			validate := validator.New()
 
@@ -58,15 +60,15 @@ func InitListener() {
 				return
 			}
 
-			log.Println("Payload successfully parsed 🤖")
+			llog.Logger.Infoln("Payload successfully parsed 🤖")
 
-			affectedRows, err := tasks.SavePSPayload(DB, &psPayload)
+			result := tasks.SaveIncident(DB, &psPayload)
 
-			if err != nil {
+			if result.Error != nil {
 				message.Nack()
 			}
 
-			log.Printf("Affected rows: %d", affectedRows)
+			log.Printf("Affected rows: %d", result.RowsAffected)
 
 			message.Ack()
 		})

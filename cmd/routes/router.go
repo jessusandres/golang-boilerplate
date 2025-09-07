@@ -1,10 +1,11 @@
 package routes
 
 import (
-	"github.com/gin-gonic/gin"
-	"lookerdevelopers/boilerplate/cmd/apperrors"
 	"lookerdevelopers/boilerplate/cmd/config"
+	apperrors "lookerdevelopers/boilerplate/cmd/errors/app"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
 )
 
 func BuildRouter(router gin.IRouter) {
@@ -24,5 +25,5 @@ func BuildRouter(router gin.IRouter) {
 
 	apiRouter := router.Group(config.EnvConfig.ApiPrefix)
 
-	TrackingRouter(apiRouter)
+	IncidentsRouter(apiRouter)
 }

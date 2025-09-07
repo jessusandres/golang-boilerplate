@@ -12,14 +12,9 @@ type ApiError struct {
 	UUID    string `json:"uuid,omitempty"`
 }
 
-// ApiErrorResponse represents the structure of an API error response containing an error payload.
-type ApiErrorResponse struct {
-	Error ApiError `json:"error"`
-}
-
 func (e *ApiError) ToResponse(c *gin.Context, statusCode int) {
-	c.AbortWithStatusJSON(statusCode, ApiErrorResponse{
-		Error: ApiError{
+	c.AbortWithStatusJSON(statusCode, gin.H{
+		"error": ApiError{
 			Message: e.Message,
 			UUID:    e.UUID,
 			Details: e.Details,

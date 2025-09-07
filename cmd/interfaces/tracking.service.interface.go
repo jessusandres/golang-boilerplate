@@ -5,6 +5,6 @@ import (
 	"lookerdevelopers/boilerplate/cmd/dto"
 )
 
-type ITrackingService interface {
-	Patch(ctx context.Context, payload *dto.TrackingPatchDto) (int, error)
+type IIncidentsService interface {
+	Patch(ctx context.Context, payload *dto.IncidentPatchDto) (dto.IncidentDto, error)
 }

@@ -1,8 +1,10 @@
-package config
+package llog
 
 import (
-	"go.uber.org/zap"
 	"log"
+	"lookerdevelopers/boilerplate/cmd/config"
+
+	"go.uber.org/zap"
 )
 
 var Logger *zap.SugaredLogger
@@ -12,7 +14,7 @@ func init() {
 
 	var logger *zap.Logger
 
-	if EnvConfig.Environment == "production" {
+	if config.EnvConfig.Environment == "production" {
 		logger, _ = zap.NewProduction()
 	} else {
 		logger, _ = zap.NewDevelopment()
