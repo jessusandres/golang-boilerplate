@@ -1,0 +1,48 @@
+options:
+  logging: CLOUD_LOGGING_ONLY
+  pool: {}
+  machineType: E2_MEDIUM
+projectId: $PROJECT_ID
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    automapSubstitutions: true
+    args:
+      - build
+      - -t
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_IMAGE_NAME}:latest'
+      - '.'
+
+  # Push the image to GCR
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      [
+        'push',
+        '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_IMAGE_NAME}:latest',
+      ]
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - '${_SERVICE_NAME}'
+      - '--image'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_IMAGE_NAME}:latest'
+      - '--region'
+      - '${_REGION}'
+      - '--no-allow-unauthenticated'
+      - '--set-env-vars=API_PREFIX=${_API_PREFIX}'
+      - '--set-env-vars=GO_ENV=${_GO_ENV}'
+      - '--set-env-vars=GIN_MODE=${_GIN_MODE}'
+      - '--set-env-vars=LOCAL_ONLY=${_LOCAL_ONLY}'
+      - '--set-secrets=DB_HOST=${_DB_HOST},DB_PASSWORD=${_DB_PASSWORD},DB_USERNAME=${_DB_USERNAME}'
+      - '--set-env-vars=DB_PORT=${_DB_PORT}'
+      - '--set-env-vars=DB_LOGGER=${_DB_LOGGER}'
+      - '--set-env-vars=DB_NAME=${_DB_NAME}'
+      - '--set-env-vars=DB_SSL_MODE=${_DB_SSL_MODE}'
+      - '--set-env-vars=DB_MAX_CONNECTIONS=${_DB_MAX_CONNECTIONS}'
+      - '--set-env-vars=DB_MIN_CONNECTIONS=${_DB_MIN_CONNECTIONS}'
+      - '--verbosity=debug'
+
+images:
+  - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_IMAGE_NAME}:latest

@@ -1,0 +1,12 @@
+package httpdtoreq
+
+import "time"
+
+type HTTPCreateIncidentDTO struct {
+	Title        string    `json:"title" binding:"required" validate:"required"`
+	Description  string    `json:"description" binding:"required" validate:"required"`
+	IncidentType string    `json:"incidentType" binding:"required" validate:"required,oneof=emergency warning info"`
+	Location     string    `json:"location" binding:"required" validate:"required"`
+	Image        string    `json:"image" binding:"base64" validate:"base64"`
+	EventDate    time.Time `json:"eventDate" binding:"required" validate:"required,iso8601"`
+}

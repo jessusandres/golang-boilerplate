@@ -1,4 +1,4 @@
-# <center> Golang Boilerplate (Gin + GCP Functions + GORM) </center>
+# <center> Golang Boilerplate (Gin + GORM + CQRS) </center>
 
 <div align="center" style="margin-bottom: 20px; margin-top: 20px; font-size: 50px; display: flex; align-items: center; justify-content: center;">
     <img width="159px" src="https://go.dev/images/gophers/motorcycle.svg">
@@ -10,16 +10,14 @@
 
 ---
 
-### This repository provides a practical starter for building HTTP APIs that can run both:
-- As a local server (Gin) for development
-- As a Google Cloud Function via functions-framework-go
+### A practical starter for building HTTP APIs with Gin, GORM, and a clean CQRS modular architecture.
 
-It also includes:
-- Postgres integration via GORM
-- Pub/Sub listener scaffold
-- Structured logging (zap)
+It includes:
+- PostgreSQL integration via GORM
+- CQRS setup (commands, queries, buses, handlers)
+- Structured logging with slog
 - Request validation middleware
-- Clear layering: routes, controllers, services, tasks, models, etc.
+- Clear layering: internal/modules (feature modules), shared utilities, HTTP routes/middlewares
 
 ---
 
@@ -27,16 +25,15 @@ It also includes:
 - Requirements
   - Go 1.25+
   - Docker (optional, for Postgres)
-  - make (optional)
 - Clone and install
   - git clone <this-repo>
   - cd golang-boilerplate
   - go mod download
 - Configure environment
-  - Copy and adjust the following .env example in the project root:
+  - Create a .env file in the project root. Example:
 
-    FUNCTION_TARGET=HttpEntrypoint
     PORT=8080
+    LOCAL_ONLY=true
     GO_ENV=development
     API_PREFIX=api
     DB_HOST=localhost
@@ -50,13 +47,18 @@ It also includes:
     DB_LOGGER=true
     USE_SQL_CONNECTOR=false
 
-  - Note: FUNCTION_TARGET must match the name you want to expose as an HTTP function (see function.go). Any string is accepted as long as it stays consistent across .env and deployment.
+  - For Docker Compose database startup, also add:
+
+    POSTGRES_PORT=5432
+    POSTGRES_USER=postgres
+    POSTGRES_PASSWORD=postgres
+    POSTGRES_DB=looker
+
 - Start Postgres (optional, via Docker Compose)
-  - Ensure the .env contains the DB_* variables
   - docker compose up -d
-  - This will also apply db_init/ddl.sql on first run (includes demo data)
-- Run locally (Gin server via Functions Framework)
-  - go run ./cmd
+  - This will also apply scripts/db/ddl.sql on first run (includes demo data)
+- Run locally
+  - go run ./cmd/server
   - Optionally, set LOCAL_ONLY=true to bind to 127.0.0.1 only
   - Server listens on http://localhost:8080 by default
 - Run tests
@@ -65,26 +67,32 @@ It also includes:
 
 ## API overview
 - Base routes
-  - GET /        → {"message": "Hello from Gin!"}
-  - GET /ping    → pong
-  - GET /fail    → returns a 400 error (sample error path)
+  - GET /         → {"message": "Hello from Gin CQRS API!", "status": "healthy"}
+  - GET /ping     → pong
+  - GET /health   → {"status": "healthy", "service": "incidents-api"}
+  - GET /fail     → returns a 400 error (sample error path)
 - Incidents endpoints
-  - Base path is prefixed with API_PREFIX (default "/api"). Full path: POST {API_PREFIX}/incidents
-  - POST {API_PREFIX}/incidents
+  - Base path is prefixed with API_PREFIX and versioned: {API_PREFIX}/v1
+  - GET {API_PREFIX}/v1/incidents
+    - Query params:
+      - description: string (optional, max 50)
+      - limit: number (1..100, default 10)
+      - offset: number (>= 0, optional)
+  - POST {API_PREFIX}/v1/incidents
     - Headers: Content-Type: application/json
     - Body:
       {
         "title": "string (required)",
         "description": "string (required)",
-        "incidentType": "string (required)",
+        "incidentType": "string (required, one of: emergency | warning | info)",
         "location": "string (required)",
         "image": "base64 string (optional)",
         "eventDate": "ISO 8601 timestamp (required)"
       }
-    - Response: 200 OK
+    - Response example (list shape may include):
       {
-        "data": {
-          "incident": {
+        "incidents": [
+          {
             "id": number,
             "title": string,
             "description": string,
@@ -94,15 +102,16 @@ It also includes:
             "eventDate": string,
             "createdAt": string
           }
-        }
+        ],
+        "total": number
       }
-    - Example:
-      curl -X POST "http://localhost:8080/api/incidents" \
+    - POST example:
+      curl -X POST "http://localhost:8080/api/v1/incidents" \
            -H "Content-Type: application/json" \
            -d '{
                  "title": "Power outage",
                  "description": "Area wide blackout",
-                 "incidentType": "Power",
+                 "incidentType": "emergency",
                  "location": "Sector 7",
                  "image": "",
                  "eventDate": "2025-09-06T20:00:00Z"
@@ -112,74 +121,81 @@ It also includes:
 ## Project structure
 - Root
   - README.md
-  - docker-compose.yml            → Local Postgres with seed data (db_init/ddl.sql)
-  - function.go                   → Registers the HTTP entrypoint for Cloud Functions
+  - docker-compose.yml            → Local Postgres with seed data (scripts/db/ddl.sql)
+  - Dockerfile
   - go.mod, go.sum
-  - runDeploy.sh, sonar.properties (if used)
+  - runDeploy.sh, sonar.properties (optional)
 - cmd/
-  - main.go                       → Local entrypoint; starts functions framework server
-  - config/config.go              → Loads .env and validates against schema
-  - controllers/                  → HTTP controllers (e.g., incidents.controller.go)
-  - dto/                          → Data transfer objects (request/response shapes)
-  - errors/
-    - api/                        → API error transport objects
-    - app/                        → Application-level error helpers
-  - instances/
-    - gorm.instance.go            → GORM DB connection (Postgres)
-    - pubsub.instance.go          → Pub/Sub listener scaffold
-  - interfaces/                   → Interfaces for services, validators, etc.
-  - logger/logger.go              → zap SugaredLogger initialization
-  - middlewares/                  → Gin middlewares (errors, state, validation)
-  - models/                       → GORM models (e.g., Incident)
-  - routes/
-    - router.go                   → Base routes and API group registration
-    - incidents.router.go         → Incidents route wiring
-    - not_foud.route.go           → 404 handler
-  - services/                     → Business logic (e.g., IncidentsService)
-  - tasks/                        → Unit-of-work operations (e.g., SaveIncident)
-  - types/                        → Shared types (env config, API responses, validation)
-  - utils/                        → Helpers (env parsing, error helpers, API response)
-- db_init/
-  - ddl.sql                       → Schema and demo data for local DB
+  - server/
+    - main.go                     → App entrypoint; sets up middlewares, routes, and CQRS handlers
+- internal/
+  - config/
+    - config.go                   → Loads .env and validates against schema (godotenv + custom parser)
+  - modules/
+    - incident/
+      - adapters/
+        - impl/                   → GORM implementation
+        - models/                 → GORM models
+      - commands/                 → Commands (create/update) + handlers
+      - queries/                  → Queries (find) + handlers
+      - http/
+        - controllers/            → Gin controllers
+        - dto/                    → HTTP DTOs (req/res)
+        - routes/                 → Module routes
+      - infrastructure/
+        - repository/             → Repository abstraction
+      - interfaces/               → Interfaces for controller/service
+      - mappers/                  → Entity ↔ DTO mappers
+      - services/                 → Domain services (uses command/query buses)
+  - shared/
+    - cqrs/                       → Command/Query buses and setup
+    - errors/                     → API and App error helpers
+    - http/
+      - middlewares/              → Error handling, state, validation
+      - routes/                   → Base router and not_found handler
+      - types/                    → Router dependency wiring
+    - instances/
+      - gorm.instance.go          → GORM DB connection (Postgres)
+      - pubsub.instance.go        → Pub/Sub listener scaffold (optional)
+    - slog/                       → Structured logger setup
+    - types/                      → Env, API, HTTP error, validation types
+    - utils/                      → API/Env/Error/Service utilities (with tests)
+- scripts/
+  - db/
+    - ddl.sql                     → Schema and demo data for local DB
 
 
 ## Configuration and environment
-- See cmd/types/env.types.go for the full environment schema
+- See internal/shared/types/env.types.go for the full environment schema
   - PORT: server port (default 8080)
-  - FUNCTION_TARGET: required; exported HTTP function name
+  - LOCAL_ONLY: when true binds to 127.0.0.1, else 0.0.0.0
   - API_PREFIX: default /api
   - GO_ENV: development|production (affects logger)
   - DB_*: connection settings
   - USE_SQL_CONNECTOR: set true to use Cloud SQL connector driver
   - DB_LOGGER: toggle GORM logging
-- config/config.go loads .env via godotenv (skips when testing)
+- internal/config/config.go loads .env via godotenv (skips when testing)
 
 
 ## Local development notes
-- The app uses Google Functions Framework under the hood for parity with Cloud Functions. main.go starts the framework and binds Gin to it.
-- For 127.0.0.1 binding, set LOCAL_ONLY=true.
+- Server is a plain Gin app. CQRS is wired in cmd/server/main.go.
 - 404 handler returns a JSON error with a request UUID when available.
 
 
 ## Database
-- docker-compose.yml starts a Postgres 17 container and mounts db_init/ddl.sql to auto-create the schema and seed demo data at first startup.
+- docker-compose.yml starts a Postgres 17 container and mounts scripts/db/ for automatic init (ddl.sql runs on first startup).
 - Default DB credentials are read from .env. Adjust as needed.
 
 
 ## Pub/Sub listener
-- cmd/instances/pubsub.instance.go contains a scaffold to receive messages and persist incidents using the same task as the HTTP flow.
-- It is not started by default. Wire it in as needed (e.g., from an init or main) and fill projectID/subscriptionName.
+- internal/shared/instances/pubsub.instance.go contains a scaffold to receive messages and persist incidents using the same flow.
+- It is not started by default. Wire it in as needed and configure project/subscription.
 
 
 ## Testing
-- Unit tests exist under cmd/utils (api, errors, service helpers)
+- Unit tests exist under internal/shared/utils (api, errors, service helpers)
 - Run: go test ./...
 
-
-## Deployment (Cloud Functions HTTP)
-- Ensure FUNCTION_TARGET in env matches the function name you register.
-- function.go dynamically registers functions.HTTP(functionTarget, handler).
-- Follow gcloud CLI steps to deploy an HTTP Cloud Function with Go and set the same FUNCTION_TARGET.
 
 ## License
 - MIT or as appropriate for your project.

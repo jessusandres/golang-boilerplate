@@ -4,7 +4,7 @@ services:
   postgres:
     container_name: looker-developers-db
     image: postgres:17.1-alpine
-    restart: always
+    restart: unless-stopped
     ports:
       - "${POSTGRES_PORT}:5432"
     environment:
@@ -22,7 +22,7 @@ services:
       - postgresql:/data/postgres
       - postgresql_lib:/var/lib/postgresql
       - postgresql_data:/var/lib/postgresql/data
-      - ./db_init:/docker-entrypoint-initdb.d
+      - ./scripts/db:/docker-entrypoint-initdb.d
 
 volumes:
   postgresql:
